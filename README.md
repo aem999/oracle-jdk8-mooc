@@ -1,9 +1,9 @@
 # oracle-jdk8-mooc
-Oracle Massive Open Online Course: Java SE 8 Lambdas and Streams
+Notes from Oracle Massive Open Online Course: Java SE 8 Lambdas and Streams
 
 Lambda Expression
 =================
-Lambda expressions are anonymous functions i.e. methods without a name and not associated with a class:
+*Lambda expressions* are anonymous functions i.e. methods without a name and not associated with a class:
 
     (parameters) -> expression
     or
@@ -18,8 +18,9 @@ Lambda expressions are anonymous functions i.e. methods without a name and not a
        
 Functional Interfaces
 --------------------
-An interface with a single abstract method. Lambda expressions provide the implementation for the abstract method hence
-they can be used wherever the type is a functional interface. JDK 8 also allows interfaces to contain:
+A *functional interface* is an interface with a single abstract method. Lambda expressions provide the implementation 
+for the abstract method hence they can be used wherever the type is a functional interface. JDK 8 also allows interfaces
+to contain:
 
 * default methods
 * static methods
@@ -130,3 +131,25 @@ Take _two_ inputs and return a boolean result:
 Parameters     | Output  | Functional Interface         | Method
 -------------- | ------  | ---------------------------- | ------
 T              | boolean | BiPredicate\<T, U>           | boolean test(T t, U u)
+
+
+Method References
+-----------------
+A *method reference* is a shorthand means for referring to an existing method and usinf it as a lambda expression. There
+are 3 types of *method references*:
+
+1) Static methods:
+
+    Lambda:             (args) -> ClassName.staticMethod(args)          e.g.    (String s) -> System.out.println(s)
+    Method Reference:   ClassName::staticMethod                                 System.out::println
+    
+2) Instance methods of an arbitrary type:
+
+    Lambda:             (arg0, others) -> arg0.instanceMethod(others)   e.g.    (String s, int i) -> s.substring(i)
+    Method Reference:   ClassName::instanceMethod                               String:substring
+
+3) Instance methods of an existing object:
+
+    Lambda:             (args) -> obj.instanceMethod(args)              e.g.    (Axis a) -> getLength(a)              
+    Method Reference:   obj::instanceMethod                                     this::getLength
+
