@@ -1,7 +1,12 @@
-# IDE
+## IDE
 .idea
 *.iml
 
 # Java
 target
+out
 *.class
+
+
+slides
+#src/main/java/Lambdas.java
