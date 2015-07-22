@@ -294,8 +294,7 @@ The pipeline is only evaluated when the terminal operation is called and then:
 Primitive Streams
 -----------------
 By default streams produces elements of type `Object` which can lead to unnecessary boxing and unboxing when 
-converting between objects and primitives. Hence, JDK 8 also provides 3 primitive streams to improve stream efficiency:
-- `IntStream`, `DoubleStream`, `PrimitiveStream` e.g.
+converting between objects and primitives. Hence, JDK 8 also provides 3 primitive streams to improve stream efficiency - `IntStream`, `DoubleStream`, `PrimitiveStream`:
 
     int highScore = students.stream()
         .filter(s -> s.graduationYear() == 2015)
