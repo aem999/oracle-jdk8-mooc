@@ -254,8 +254,9 @@ New logger method now takes a Supplier function:
            
 Streams
 =======
-A *stream* is a sequence of elements. Unlike a collection, it is not a data structure that stores elements. Instead, a
-stream is used to carry values from a *source* through a *pipeline* and is calculated on demand.
+A *stream* is a sequence of elements supporting aggregation operations. Unlike a collection, it is not a data structure 
+that stores elements. Instead, a stream is used to carry values from a *source* through a *pipeline* and is calculated 
+on demand.
 
 
 Streams vs Collections
@@ -281,7 +282,7 @@ Stream Pipeline
 A *pipeline* contains the following components:
 
 - a source
-- zero or more intermediate operations, such as fiter, that produce a new stream.
+- zero or more intermediate operations, such as filter, that produce a new stream.
 - a terminal operation, such as `forEach`, that produces a non-stream result, such as a primitive value, a collection, 
 or in the case of `forEach`, no value at all.
 
@@ -293,11 +294,85 @@ The pipeline is only evaluated when the terminal operation is called and then:
 
 Primitive Streams
 -----------------
-By default streams produces elements of type `Object` which can lead to unnecessary boxing and unboxing when 
-converting between objects and primitives. Hence, JDK 8 also provides 3 primitive streams to improve stream efficiency - `IntStream`, `DoubleStream`, `PrimitiveStream`:
+By default streams produce a sequence of object references which can lead to unnecessary boxing and unboxing when 
+converting between objects and primitives. Hence, JDK 8 also provides 3 primitive streams to improve stream efficiency 
+- `IntStream`, `DoubleStream`, `PrimitiveStream`:
 
     int highScore = students.stream()
         .filter(s -> s.graduationYear() == 2015)
         .mapToInt(s -> s.getScore())            // produces a stream of int values so no boxing/unboxing required
         .max()
+
  
+Collection Interface
+--------------------
+- `Collection.stream()` - provides a sequential sequence of elements
+- `Collection.parallel()` - provides a possibly parallel sequence of elements (uses the `fork/join` framework). This is
+  the class that can provide a parallel stream directly 
+
+
+Arrays Class
+------------
+- `Arrays.stream(T[] array)` - provides a sequential sequence of references to objects of type T
+- `Arrays.stream(double[] array)` - provides a sequential sequence of doubles
+- `Arrays.stream(int[] array)` - provides a sequential sequence of ints
+- `Arrays.stream(long[] array)` - provides a sequential sequence of longs
+
+
+Files
+-----
+- `Files.find(Path start, int maxDepth, BiPredicate<Path, BasicFileAttributes> matcher, FileVisitOption... options)`
+   Provides a lazily populated stream of `File` references that match the specified `BiPredicate`
+- `Files.list(Path dir)`
+   Provides a lazily populated stream of entries for the specified directory
+- `Files.lines(Path dir)`
+   Provides a lazily populated stream of strings that are the lines in the specified file
+- `Files.walk(Path start, FileVisitOption... options)`
+   Provides a lazily populated stream of `File` references walking from a given path
+   
+
+Random Numbers
+--------------
+There are 3 related classes for producing finite or infinite streams of random numbers:
+
+- `Random` - produce a stream of pseudorandom `doubles`, `ints` or ``longs
+- `ThreadLocalRandom` - as `Random` but offers better performance in multithreaded designs
+- `SplittableRandom` - as `Ramdom` but can be split across threads without sharing any state
+
+These classes allow four versions of `double`, `int` or `long` streams to be produced:
+
+- finite
+- infinite
+- with a seed
+- without a seed
+
+=> 36 possible sources of random number streams
+
+
+Miscellaneous Classes
+---------------------
+- `ZIPFile.stream()` - returns an ordered Stream of entries in the ZIP file
+- `JARFile.stream()` - returns an ordered Stream of entries in the JAR file
+- `BufferedLines.lines()` - returns a lazily populated stream of strings that are the lines read by the reader
+- `Pattern.splitAsStream()` - returns a stream of matches of a pattern
+- `CharSequence.chars()` - returns an `IntStream` of char values from a sequence
+- `CharSequence.codePoints()` - returns an `IntStream` of Unicode code points from a sequence
+- `BitSet.streams()` - returns a stream of indices for which the `BitSet` contains a bit in the set state
+
+
+Stream Static Methods
+---------------------
+- `DoubleStream`, `IntStream`, `LongStream` - primitive specialisations of the `Stream` interface
+- `Stream.concat(stream, stream)` - returns a lazily concatenated `Stream` whose elements are all the elements of the 
+   first stream followed by all the elements of the second stream. The resulting stream is ordered if both of the input 
+   streams are ordered, and parallel if either of the input streams is parallel
+- `Stream.empty()` - returns an empty sequential `Stream`
+- `Stream.of(T... values)` - returns a sequential ordered stream containing the specified values.
+- `IntStream.range(int, int)` - returns a sequential ordered `IntStream` from start (inclusive) to end (exclusive) 
+   incrementing by 1.
+- `IntStream.range(int, int)` - returns a sequential ordered `IntStream` from start (inclusive) to end (inclusive) 
+   incrementing by 1.
+- `Stream.generate(Supplier<T> s)` - returns an infinite sequential unordered `Stream` where each element is generated 
+   by the provided Supplier.
+- `Stream.iterate(T seed, UnaryOperator<T> f)` - returns an infinite sequential ordered `Stream` produced by iterative 
+   application of a function f to an initial element seed, producing a ``Stream consisting of seed, f(seed), f(f(seed)), etc.
