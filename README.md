@@ -254,3 +254,51 @@ New logger method now takes a Supplier function:
            
 Streams
 =======
+A *stream* is a sequence of elements. Unlike a collection, it is not a data structure that stores elements. Instead, a
+stream is used to carry values from a *source* through a *pipeline* and is calculated on demand.
+
+
+Streams vs Collections
+----------------------
+
+Collections                                | Streams
+-----------                                | -------
+an in-memory data structure                | an abstraction
+elements created before they are added     | elements created on demand
+external iteration (performed by the user) | internal iteration (handled by the stream itself)
+finite size                                | may be infinite
+sequential processing                      | sequential or parallel processing  
+
+
+Stream Source
+-------------
+The stream *source* may be a collection, an array, a generator function, or an I/O channel. There are 71 methods in 15 
+classes in JDK 8 that can be used to provide a stream source.
+
+
+Stream Pipeline
+---------------
+A *pipeline* contains the following components:
+
+- a source
+- zero or more intermediate operations, such as fiter, that produce a new stream.
+- a terminal operation, such as `forEach`, that produces a non-stream result, such as a primitive value, a collection, 
+or in the case of `forEach`, no value at all.
+
+The pipeline is only evaluated when the terminal operation is called and then:
+- the operations may be executed sequentially or in parallel
+- intermediate operations may be merged
+- the JVM may perform other optimisations e.g. a distinct stream passed to `distinct()` is a noop
+
+
+Primitive Streams
+-----------------
+By default streams produces elements of type `Object` which can lead to unnecessary boxing and unboxing when 
+converting between objects and primitives. Hence, JDK 8 also provides 3 primitive streams to improve stream efficiency:
+- `IntStream`, `DoubleStream`, `PrimitiveStream` e.g.
+
+    int highScore = students.stream()
+        .filter(s -> s.graduationYear() == 2015)
+        .mapToInt(s -> s.getScore())            // produces a stream of int values so no boxing/unboxing required
+        .max()
+ 
