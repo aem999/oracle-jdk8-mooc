@@ -135,7 +135,7 @@ T              | boolean | BiPredicate\<T, U>           | boolean test(T t, U u)
 
 Method References
 -----------------
-A *method reference* is a shorthand means for referring to an existing method and usinf it as a lambda expression. There
+A *method reference* is a shorthand means for referring to an existing method and using it as a lambda expression. There
 are 3 types of *method references*:
 
 1) Static methods:
@@ -153,3 +153,104 @@ are 3 types of *method references*:
     Lambda:             (args) -> obj.instanceMethod(args)              e.g.    (Axis a) -> getLength(a)              
     Method Reference:   obj::instanceMethod                                     this::getLength
 
+
+Constructor References
+----------------------
+A *constructor reference* is a shorthand means for referring to a class constructor and using it as a lambda expression:
+
+    Lambda:                 (int value) -> new Integer(value)
+    Constructor Reference:  Integer::new
+    
+    Lambda:                 () -> new ArrayList<String>()
+    Constructor Reference:  ArrayList<String>::new
+    
+    
+Local Variable Capture
+----------------------
+Lambda expressions can access final or *effectively final* local variables from the surrounding scope. An *effectively 
+final* variable is one that is assigned once even if not explicitly declared *final*. The function is bound to the 
+value of the local variable forming a *closure*:
+
+Effectively final:
+
+    String s = "Started";   // s is effectively final
+    new Thread(() -> System.out.println(s)).start();
+
+Explicitly final:
+    
+    final String s = "Started";
+    new Thread(() -> System.out.println(s)).start();
+
+    
+'this' Keyword
+--------------
+The `this` keyword in a lambda expression refers to the *main* class.  As a lambda is an anonymous function not 
+associated with any class there cannot be a`this` reference for the lambda itself (even though the compiler may create 
+an inner class to hold the lambda).
+
+Note - the compiler will insert a reference to `this` for you if required which can be dangerous! e.g.
+
+    class DataProcesssor {
+        private int currentValue;
+    
+        public void process() {
+            List<Double> values = Arrays.asList(1.1, 2.3, 3.5);
+            values.forEach(d -> System.out.println(currentValue++ + ": " + d));
+        }
+    }
+
+The above should not compile because `currentValue` is not effectively final but the compiler actually inserts a 
+reference to `this` which is effectively final. Hence, the value of `this` is bound to the lambda making the closure and
+so `currentValue` can then be accessed using the variable `this`:
+
+     class DataProcesssor {
+         private int currentValue;
+     
+         public void process() {
+             List<Double> values = Arrays.asList(1.1, 2.3, 3.5);
+             values.forEach(d -> System.out.println(this.currentValue++ + ": " + d));
+         }
+     }
+    
+JDK 8 methods that use lambdas
+-----------------------------
+Several new useful methods have been added to the JDK 8 that can use lambdas.
+
+#### Iterable Interface
+Iterable.forEach(Consumer c):
+    
+    myList.forEach(System.out::println)
+    
+    
+#### Collection Interface
+Collection.removeIf(Predicate p):
+
+    List<String> myList = ...
+    myList.removeIf(s -> s.length() == 0);
+    
+#### List Interface
+List.replaceAll(UnaryOperator o)
+
+    List<String> myList = ...
+    myList.replaceAll(String::toUpperCase)
+    
+List.sort(Comparator c)  // replaces Collections.sort(List l, Comparator c)
+     
+    List<String> myList = ...
+    myList.sort((x, y) -> x.length() - y.length());
+    
+
+Lazy Evaluation
+---------------
+Lambda expressions provide a mechanism for lazy evaluation of code, i.e. code whose execution is deferred until actually
+needed. Logging is a good example where this can be useful:
+
+    logger.debug(createComplexMessage())        // complex message will be created even if not needed
+
+New logger method now takes a Supplier function:
+
+    logger.debug(() -> createComplexMessage())  // complex message will only be created if supplier.get() is called
+
+           
+Streams
+=======
