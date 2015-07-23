@@ -254,9 +254,9 @@ New logger method now takes a Supplier function:
            
 Streams
 =======
-A *stream* is a sequence of elements supporting aggregation operations. Unlike a collection, it is not a data structure 
-that stores elements. Instead, a stream is used to carry values from a *source* through a *pipeline* and is calculated 
-on demand.
+A *stream* is a sequence of elements supporting sequential or parallel aggregation operations. Unlike a collection, a 
+stream is not a data structure that stores elements. Instead, a stream is used to carry values from a *source* through a
+*pipeline* and is calculated on demand. Typically they are stateless.
 
 
 Streams vs Collections
@@ -273,7 +273,7 @@ sequential processing                      | sequential or parallel processing
 
 Stream Source
 -------------
-The stream *source* may be a collection, an array, a generator function, or an I/O channel. There are 71 methods in 15 
+A stream *source* may be a collection, an array, a generator function, or an I/O channel. There are 71 methods in 15 
 classes in JDK 8 that can be used to provide a stream source.
 
 
@@ -287,9 +287,14 @@ A *pipeline* contains the following components:
 or in the case of `forEach`, no value at all.
 
 The pipeline is only evaluated when the terminal operation is called and then:
+
+- the operations may be evaluated lazily
 - the operations may be executed sequentially or in parallel
 - intermediate operations may be merged
-- the JVM may perform other optimisations e.g. a distinct stream passed to `distinct()` is a noop
+- the JVM may perform other optimisations e.g. a distinct stream passed to `distinct()` is a redundant operation
+
+Intermediate operations must be non-interfering i.e. must not modify the objects in the stream otherwise a 
+`ConcurrentModificationException` will be thrown. However, new objects are allowed to be created.
 
 
 Primitive Streams
@@ -375,4 +380,167 @@ Stream Static Methods
 - `Stream.generate(Supplier<T> s)` - returns an infinite sequential unordered `Stream` where each element is generated 
    by the provided Supplier.
 - `Stream.iterate(T seed, UnaryOperator<T> f)` - returns an infinite sequential ordered `Stream` produced by iterative 
-   application of a function f to an initial element seed, producing a ``Stream consisting of seed, f(seed), f(f(seed)), etc.
+   application of a function f to an initial element seed, producing a `Stream` consisting of seed, f(seed), f(f(seed)), etc.
+
+
+Intermediate Operations
+-----------------------
+*Intermediate* operations:
+
+- transform a stream into another stream without modfying the original elements.
+- are always evaluated lazily
+
+Examples:
+
+- filtering
+- mapping
+- sorting
+- observing
+
+
+Intermediate Operations That Reduce The Size Of A Stream
+--------------------------------------------------------
+- `Stream.distinct()` - returns a stream with no duplicate elements
+- `Stream.filter(Predicate)` - returns a stream containing elements matching the predicate
+- `Stream.skip(long n)` - returns a stream ignoring the first n elements of the input stream
+- `Stream.limit(long n)` - returns a stream containing the first n elements of the input stream
+
+
+Map Operation
+-------------
+Performs a *one-to-one* transformation of elements in a stream:
+
+- `Stream.map(Function mapper)` - returns a stream where the supplied mapping function has been applied to each element
+- `Stream.mapToDouble(ToDoubleFunction mapper)` - returns a stream of `double` primitives using the supplied mapping function
+- `Stream.mapToInt(ToIntFunction mapper)` - returns a stream of `int` primitives using the supplied mapping function
+- `Stream.mapToLong(ToLongFunction mapper)` - returns a stream of `long` primitives using the supplied mapping function
+
+
+FlatMap Operation
+-----------------
+Performs a *one-to-many* transformation of elements in a stream and then 'flattens' the results into a new stream:
+
+- `Stream.flatMap(Function mapper)` - returns a stream where the supplied mapping function has been applied to each element
+  of this stream to produce a mapped stream which is then placed in the new stream. If the mapped stream is null an empty
+  stream is added to the result stream instead.
+- `Stream.flatMapToDouble(Function mapper)` - as `flatMap()` but returns a stream of `double` primitives
+- `Stream.flatMapToInt(Function mapper)` - as `flatMap()` but returns a stream of `int` primitives
+- `Stream.flatMapToLong(Function mapper)` - as `flatMap()` but returns a stream of `long` primitives
+
+
+Sorting/Unsorting Operations
+----------------------------
+- `Stream.sort()` - returns a stream sorted in natural order
+- `Stream.sort(Comparator c)` - returns a stream sorted into the order determined by the comparator
+- `Stream.unordered()` - returns an equivalent stream that is unordered. May return itself if the stream was already unordered.
+
+
+Observing Stream Elements
+-------------------------
+Observe elements of a stream as they pass *without* modifying them:
+
+- `Stream.peek(Consumer c)` - returns an output stream that is identical to the input stream but each element is passed
+to the `accept` method of the consumer. Useful for debugging and doing more than one thing with a stream.
+
+
+Terminal Operations
+-------------------
+*Terminal* operations are ones that produce a result:
+- aggregate functions like `max()`, `count()`
+
+or a side-effect: 
+- `forEach(Consumer c)`
+
+
+Terminal Operations For Matching
+--------------------------------
+- `Stream.findFirst()` - returns an `Optional` containing the first element in an ordered stream, any element for an 
+unordered stream or an empty `Optional` for an empty stream
+- `Stream.findAny()` - returns an `Optional` describing some element of the stream, or an empty `Optional` if the stream 
+is empty.
+- `Stream.allMatch(Predicate predicate)` - returns `true` if all elements in the stream match the `Predicate` 
+- `Stream.anyMatch(Predicate predicate)` - returns `true` if any elements in the stream match the `Predicate`
+- `Stream.noneMatch(Predicate predicate)` - returns `true` if none of the elements in the stream match the `Predicate`
+
+
+Reduction Operations
+--------------------
+A reduction operation (also called a fold) takes a sequence of input elements and combines them into a single summary 
+result by repeated application of a combining operation, such as finding the sum or maximum of a set of numbers, or 
+accumulating elements into a list. The streams classes have multiple forms of general reduction operations:
+
+- collectors - perform reductions into a mutable container
+- reducers - perform reductions into a single value of the same type
+
+
+Collectors
+----------
+*Collectors* accumulate entries into a mutable result container, and optionally perform a final transform on the result.
+A Collector is specified by four functions that work together:
+
+- `supplier()` - creation of a new result container
+- `accumulator()` - incorporating a new data element into a result container
+- `combiner()` - combining two result containers into one
+- `finisher()` - performing an optional final transform on the container
+
+Examples:
+
+- `Stream.collect(Collector c)` - returns a mutable result container, such as a `Collection` or `StringBuilder`, using the
+ specified `Collector` to accumulate elements from the stream into the results container
+- `Stream.toArray()` - returns an array containing the elements of the stream
+
+
+Reducers
+--------
+*Reducers* accumulate the elements of this stream into a single value, using an *associative*, *stateless*, 
+*non-interfering* accumulation function. The accumulator takes a partial result and the next value and returns a new 
+partial result:
+
+- `Stream.reduce(BinaryOperator accumulator)` - returns an `Optional` containing the reduced value of this stream 
+according to the provided `accumulator` or an empty `Optional` if there is none.
+- `Stream.reduce(T identity, BinaryOperator accumulator)` - performs the reduction using an initial value T. 
+Note - returns a value instead of an optional
+- `Stream.reduce(T identity, BiFunction accumulator, BinaryOperator combiner)` - to perform a combined map and reduce
+i.e. the `BiFunction` performs the map and the `BinaryOperator` performs the reduce
+
+
+Numerical Results
+-----------------
+- `Stream.count()` - returns a `long` representing the count of elements in the stream. This is a special case of a 
+reduction and is equivalent to `return mapToLong(e -> 1L).sum();`
+- `Stream.max(Comparator comparator)` - returns an `Optional` containing the maximum element of this stream according to 
+the provided `Comparator` or an empty `Optional` if the stream is empty. This is a special case of a reduction.
+- `Stream.min(Comparator comparator)` - returns an `Optional` containing the minimum element of this stream according to 
+the provided `Comparator` or an empty `Optional` if the stream is empty. This is a special case of a reduction.
+
+Primitive type streams (`DoubleStream`, `IntStream`, `LongStream`):
+
+- `average()` - returns an `OptionalDouble` containing the arithmetic mean of the stream, or an empty `OptionalDouble`
+if the stream is empty
+- `sum()` - returns the sum of elements in the stream. This is a special case of a reduction and is equivalent to 
+`return reduce(0, T::sum)` where `T` is one of `Double`, `Integer`, `Long`
+
+
+Iteration
+---------
+- `Stream.forEach(Consumer action)` - performs an action for each element of this stream. For parallel stream pipelines,
+this operation does not guarantee to respect the element order of the stream
+- `Stream.forEachOrdered(Consumer action)` - performs an action for each element of this stream in order (if one exists).
+For parallel streams the actions may be performed in different threads but by using a *happens-before* relationship the 
+ordering is respected
+
+
+Optional Class
+--------------
+A container object for containing a possibly null value. This is a value-based class so use of identity-sensitive 
+operations (including reference equality (==), identity hash code, or synchronization) on instances of `Optional` may 
+have unpredictable results and should be avoided.
+
+`get()` - returns a value is present otherwise throws `NoSuchElementException`
+`isPresent()` - returns true if there is a value present
+`ifPresent(Consumer consumer)` - invokes the specified consumer with the value if present otherwise does nothing
+`filter(Predicate predicate)` - returns the `Optional` if the value matches the predicate otherwise returns an empty `Optional`
+`map(Function mapper)` - returns an `Optional` containing the result of applying the mapping function to the value of 
+this `Optional`, if a value is present, otherwise returns an empty Optional
+`flatMap(Function mapper)` - like `map()` except does not wrap the result in an `Optional` as the mapper function 
+already returns an `Optional`. This prevents nested results like `Optional<Optional<String>>`
