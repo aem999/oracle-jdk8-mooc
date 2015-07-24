@@ -536,11 +536,11 @@ A container object for containing a possibly null value. This is a value-based c
 operations (including reference equality (==), identity hash code, or synchronization) on instances of `Optional` may 
 have unpredictable results and should be avoided.
 
-`get()` - returns a value is present otherwise throws `NoSuchElementException`
-`isPresent()` - returns true if there is a value present
-`ifPresent(Consumer consumer)` - invokes the specified consumer with the value if present otherwise does nothing
-`filter(Predicate predicate)` - returns the `Optional` if the value matches the predicate otherwise returns an empty `Optional`
-`map(Function mapper)` - returns an `Optional` containing the result of applying the mapping function to the value of 
+- `get()` - returns a value is present otherwise throws `NoSuchElementException`
+- `isPresent()` - returns true if there is a value present
+- `ifPresent(Consumer consumer)` - invokes the specified consumer with the value if present otherwise does nothing
+- `filter(Predicate predicate)` - returns the `Optional` if the value matches the predicate otherwise returns an empty `Optional`
+- `map(Function mapper)` - returns an `Optional` containing the result of applying the mapping function to the value of 
 this `Optional`, if a value is present, otherwise returns an empty Optional
-`flatMap(Function mapper)` - like `map()` except does not wrap the result in an `Optional` as the mapper function 
+- `flatMap(Function mapper)` - like `map()` except does not wrap the result in an `Optional` as the mapper function 
 already returns an `Optional`. This prevents nested results like `Optional<Optional<String>>`
