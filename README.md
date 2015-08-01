@@ -485,16 +485,51 @@ A Collector is specified by four functions that work together:
 
 Examples:
 
+- `Stream.toArray()` - returns an array containing the elements of the stream
 - `Stream.collect(Collector c)` - returns a mutable result container, such as a `Collection` or `StringBuilder`, using the
  specified `Collector` to accumulate elements from the stream into the results container
-- `Stream.toArray()` - returns an array containing the elements of the stream
+- `Collectors.toCollection(Supplier collectorFactory)` - returns a `Collector` that accumulates the input elements into 
+a new `Collection`, in encounter order
+- `Collectors.toList()` - returns a `Collector` which collects all the input elements into a new `List`, in encounter order
+- `Collectors.toSet()` - returns a `Collector` which collects all the input elements into a new `Set` (eliminates duplicates),
+- `Collectors.toMap(Function keyMapper, Function valueMapper)` - returns a `Collector` which collects elements into a `Map` 
+whose keys and values are the result of applying mapping functions to the input elements. Duplicate keys are not allowed.
+`Function.identity()` can be  used to place the element itself into the map
+- `Collectors.toMap(Function keyMapper, Function valueMapper, BinaryOperator merge)` - returns a `Collector` which collects
+elements into a `Map` but this version uses a `BinaryOperator` to merge values for duplicate keys.
+- `Collectors.groupingBy(Function classifier)` - returns a `Collector` implementing a "group by" operation on the input
+elements using a classification function, and returning the results in a `Map<K, List<V>>`. The map key is specified by 
+the classifier and the value is a list of the input elements matching the key
+- `Collectors.groupingBy(Function classifier, Collector downstream)` - returns a `Collector` implementing a cascaded 
+"group by" operation on the input elements, grouping them according to a classification function, and then performing a 
+reduction operation on the values associated with a given key using the specified downstream `Collector`.
+- `Collectors.joining()` - returns a `Collector` that concatenates the input elements into a `String`, in encounter order
+- `Collectors.joining(CharSequence delimiter)` - returns a `Collector` that concatenates the input elements into a `String`,
+separated by the specified delimiter, in encounter order
+- `Collectors.joining(CharSequence delimiter, CharSequence prefix, CharSequence suffix)` - returns a `Collector` that 
+concatenates the input elements, separated by the specified delimiter, with the specified prefix and suffix, in encounter order
+- `Collectors.averagingInt(ToIntFunction mapper)` - returns a `Collector` that averages the results provided by the mapper
+- `Collectors.summarizingInt(ToIntFunction mapper)` - returns a `Collector` which applies an int-producing mapping function
+to each input element, and returns summary statistics for the resulting values
+- `Collectors.summingInt(ToIntFunction mapper)` - returns a `Collector` that produces the sum of a integer-valued function
+applied to the input elements. If no elements are present, the result is 0. (Equivalent to a `map()` then `sum()`)
+- `Collectors.maxBy(Comparator c)` - returns a `Collector` that produces the maximum value according to the `Comparator` 
+- `Collectors.minBy(Comparator c)` - returns a `Collector` that produces the minimum value according to the `Comparator` 
+- `Collectors.reduce(BinaryOperator op)` - returns a `Collector` which performs a reduction of its input elements using the
+specified `BinaryOperator`
+- `Collectors.partitioningBy(Predicate predicate)` - returns a `Collector` which partitions the input elements into 2 groups 
+according to a `Predicate`, and organizes them into a `Map<Boolean, List<T>>`
+- `Collectors.mapping(Function mapper, Collector downstream)` - returns a `Collector` which applies the mapping function
+to the input elements and provides the mapped results to the downstream `Collector`
 
 
 Reducers
 --------
 *Reducers* accumulate the elements of this stream into a single value, using an *associative*, *stateless*, 
 *non-interfering* accumulation function. The accumulator takes a partial result and the next value and returns a new 
-partial result:
+partial result. The reduction is like a recursive function but without the resource overhead.
+
+Examples:
 
 - `Stream.reduce(BinaryOperator accumulator)` - returns an `Optional` containing the reduced value of this stream 
 according to the provided `accumulator` or an empty `Optional` if there is none.
@@ -502,6 +537,7 @@ according to the provided `accumulator` or an empty `Optional` if there is none.
 Note - returns a value instead of an optional
 - `Stream.reduce(T identity, BiFunction accumulator, BinaryOperator combiner)` - to perform a combined map and reduce
 i.e. the `BiFunction` performs the map and the `BinaryOperator` performs the reduce
+- `Files.lines(path).max(Comparator.comparingInt(String::length)).get()` - returns the longest line in a file
 
 
 Numerical Results
@@ -544,3 +580,95 @@ have unpredictable results and should be avoided.
 this `Optional`, if a value is present, otherwise returns an empty Optional
 - `flatMap(Function mapper)` - like `map()` except does not wrap the result in an `Optional` as the mapper function 
 already returns an `Optional`. This prevents nested results like `Optional<Optional<String>>`
+
+
+Infinite Streams
+----------------
+To terminate there are 2 terminal functions available:
+- `findFirst()` - finds the first element
+- `findAny()` - finds any element (non-determinstic parallel result)
+
+To process results without terminating the stream:
+- `forEach()` - consumes each element but does not terminate the stream (non-deterministic parallel order). Should *not* be used to modify the elements
+- `forEachOrdered()` - consumes each element but does not terminate the stream (deterministic parallel order). Should *not* be used to modify the elements
+
+
+Parallel Streams
+----------------
+*Parallel* streams are implemented internally using the *fork-join* framework. The default `ForkJoinPool` has a 
+parallelism equal to the number of available processors as given by `Runtime.availableProcessors()`. To use a different
+level of parallelism there are 2 options:
+
+- Change the parallelism level of the common `ForkJoinPool` by setting the system property `java.util.concurrent.ForkJoinPool.common.parallelism`
+to a non-negative value indicating the thread pool size
+- Use a custom `ForkJoinPool` e.g.
+    
+        ForkJoinPool forkJoinPool = new ForkJoinPool(2);
+        List primes = forkJoinPool.submit(() ->
+            range(1, 1_000_000).parallel().boxed().filter(Primes::isPrime).collect(Collectors.toList())
+        ).get();
+
+
+Parallel Streams Uage Guidelines
+--------------------------------
+*Parallel* streams have an additional overhead compared to sequential streams so do not assume they will always be quicker:
+
+### Data Structures
+`ArrayList` - *GOOD* data structure for parallel processing
+`HashSet`, `TreeSet` - *OK* data structure for parallel processing
+`LinkedList` - *POOR* data structure for parallel processing
+
+### Operations
+`filter()`, `map()` - *EXCELLENT* for decomposing into parallel tasks
+`sorted()`, `distinct()` - *POOR* for decomposing into parallel tasks
+
+### Data Size
+N - size of dataset
+Q - Cost per element through the Stream pipeline
+N * Q - Total cost of pipeline operations
+
+N is known, but Q needs to be estimated. Profile to be sure.
+
+
+Debugging Streams
+-----------------
+Streams provide a high level of abstraction which makes code clear and easy to understand, however the downside is that
+this makes lambdas and streams difficult to debug:
+
+- a lot of work is taking place in library code which is not visible in our code
+- breakpoints in our code can only be set at a very coarse level
+- stream operations are merged to improve efficiency
+
+### Using `peek()`
+
+We can use `peek()` to find out what is happening between methods:
+
+    List<String> sortedWords = reader.lines()           // Lines from file
+        .flatMap(line -> Stream.of(line.split(REGEXP))  // Words from file
+        .map(String::toLowerCase)                       // In lower case
+        .peek(System.out::println)
+        .distinct()                                     // Remove duplicates
+        .sort((x, y) -> x.length() – y.length())        // Sort by length
+        .collect(Collectors.toList());                  // Collect to list
+
+We can also use peek() to set up a breakpoint between methods:
+
+    List<String> sortedWords = reader.lines()           // Lines from file
+        .flatMap(line -> Stream.of(line.split(REGEXP))  // Words from file
+        .map(String::toLowerCase)                       // In lower case
+        .peek(s -> s)                                   // No-op lambda to provide line for breakpoint
+        .distinct()                                     // Remove duplicates
+        .sort((x, y) -> x.length() – y.length())        // Sort by length
+        .collect(Collectors.toList());                  // Collect to list
+
+
+Debugging Lambdas
+-----------------
+Lambdas are not compiled into inner classes, instead they are compiled into `invokeDynamic` JVM calls and the implementation
+is decided at runtime. This makes debugging harder. A solution is:
+
+- extract the code in the lambda expression and move it into a separate method
+- replace the lambda expression with the method reference
+- set breakpoints in the new method
+
+
